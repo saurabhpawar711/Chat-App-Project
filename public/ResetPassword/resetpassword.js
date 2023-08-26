@@ -17,11 +17,8 @@ async function changePassword(event) {
 
     document.getElementById('typePassword').value = "";
     try {
-        console.log(70);
         const response = await axios.post(`${backendApi}/password/updatepassword/${userId}`, newPassword);
-        console.log(80);
         if (response.data.success) {
-            console.log(90);
             alert(response.data.message);
             window.location.href = '../Login/login.html';
         }

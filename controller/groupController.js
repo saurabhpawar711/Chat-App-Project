@@ -17,6 +17,7 @@ exports.createGroup = async (req, res) => {
         }, { transaction: t });
 
         const userIdArray = [];
+        userIdArray.push(userId);
         for (let i = 0; i < userToBeAdd.length; i++) {
             const idOfUserToBeAdd = await User.findOne({
                 attributes: ['id'],
@@ -24,8 +25,12 @@ exports.createGroup = async (req, res) => {
                     email: userToBeAdd[i]
                 }
             })
-            userIdArray.push(idOfUserToBeAdd.id);
-            userIdArray.push(userId);
+            if (!idOfUserToBeAdd) {
+                throw new Error("Please Enter valid email")
+            }
+            else {
+                userIdArray.push(idOfUserToBeAdd.id);
+            }
         }
 
         for (let i = 0; i < userIdArray.length; i++) {
@@ -43,7 +48,12 @@ exports.createGroup = async (req, res) => {
     catch (err) {
         console.log(err);
         await t.rollback();
-        res.status(500).json({ success: false });
+        if (err.message === "Please Enter valid email") {
+            res.status(500).json({ success: false, error: err.message });
+        }
+        else {
+            res.status(500).json({ success: false, error: "Something went wrong while creating group" });
+        }
     }
 }
 
@@ -80,22 +90,29 @@ exports.addUserinGroup = async (req, res) => {
     const t = await sequelize.transaction();
     try {
 
-        const adminUserId = req.user.id;
-
-
-        const name = req.body.name;
+        const userId = req.user.id;
+        const groupName = req.body.name;
         const userToBeAdd = req.body.userToBeAdd;
 
-
-        const groupId = await Group.findOne({
-            attributes: ['id', 'admin'],
+        const group = await Group.findOne({
             where: {
-                name: name
+                name: groupName
             }
-        });
+        })
 
-        if (groupId.admin != adminUserId) {
-            throw new Error('Only Admin has Access');
+        if (!group) {
+            throw new Error("Please Enter valid group name")
+        }
+
+        const user = await UserGroup.findOne({
+            where: {
+                userId: userId,
+                groupId: group.id
+            }
+        })
+
+        if (user.isAdmin != true) {
+            throw new Error("Only Admin have Access")
         }
 
         else {
@@ -105,10 +122,12 @@ exports.addUserinGroup = async (req, res) => {
                     email: userToBeAdd
                 }
             })
-
+            if (!userId) {
+                throw new Error("Please Enter valid email")
+            }
             await UserGroup.create({
                 userId: userId.id,
-                groupId: groupId.id
+                groupId: group.id
             }, { transaction: t });
 
             await t.commit();
@@ -117,9 +136,17 @@ exports.addUserinGroup = async (req, res) => {
     }
     catch (err) {
         console.log(err);
-        if (err.message === 'Only Admin has Access') {
+        if (err.message === 'Only Admin have Access') {
             await t.rollback();
             return res.status(500).json({ error: err.message });
+        }
+        else if(err.message === 'Please Enter valid group name') {
+            await t.rollback();
+            return res.status(500).json({ success: false, error: err.message });
+        }
+        else if(err.message === 'Please Enter valid email') {
+            await t.rollback();
+            return res.status(500).json({ success: false, error: err.message });
         }
         await t.rollback();
         res.status(500).json({ success: false });
@@ -295,6 +322,9 @@ exports.deleteGroup = async (req, res) => {
                 name: groupName
             }
         })
+        if (!group) {
+            throw new Error("Please Enter valid group name")
+        }
         const user = await UserGroup.findOne({
             where: {
                 userId: userId,
@@ -315,6 +345,10 @@ exports.deleteGroup = async (req, res) => {
     catch (err) {
         console.log(err);
         if (err.message === 'Only Admin have Access') {
+            await t.rollback();
+            return res.status(500).json({ success: false, error: err.message });
+        }
+        else if(err.message === 'Please Enter valid group name') {
             await t.rollback();
             return res.status(500).json({ success: false, error: err.message });
         }

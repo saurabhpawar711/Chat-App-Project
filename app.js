@@ -16,7 +16,7 @@ app.use(
     })
   );
 app.use(bodyParser.json({ extended: false }));
-app.use(helmet());
+// app.use(helmet());
 app.use(compression());
 app.use(express.static(path.join(__dirname, 'public')));
 

@@ -1,19 +1,27 @@
-const backendApi = "http://16.170.78.233:3000";
+
 const createTableModal = document.getElementById('createGroupModal');
 const groupCreateBtn = document.getElementById('groupCreateBtn');
 groupCreateBtn.addEventListener('click', async () => {
-    const groupName = document.getElementById('groupName').value;
-    const users = document.getElementById('emailAddresses').value;
-    const userToBeAdd = users.split(',');
-    const groupDetails = {
-        name: groupName,
-        userToBeAdd: userToBeAdd
-    };
-    console.log(groupDetails);
-    const token = localStorage.getItem('token');
-    const response = await axios.post(`${backendApi}/group/create-group`, groupDetails, { headers: { "Authorization": token } });
-
-    window.location.href = 'homepage.html';
+    try {
+        const groupName = document.getElementById('groupName').value;
+        const users = document.getElementById('emailAddresses').value;
+        if(groupName === "" || users === "") {
+            return alert('Please Enter field');
+        }
+        const userToBeAdd = users.split(',');
+        const groupDetails = {
+            name: groupName,
+            userToBeAdd: userToBeAdd
+        };
+        console.log(groupDetails);
+        const token = localStorage.getItem('token');
+        const response = await axios.post(`${backendApi}/group/create-group`, groupDetails, { headers: { "Authorization": token } });
+        window.location.href = 'homepage.html';
+    }
+    catch(err) {
+        const errMessage = err.response.data.error;
+        alert(errMessage);
+    }
 })
 
 
@@ -46,12 +54,14 @@ const addUserBtn = document.getElementById('addUserBtn');
 addUserBtn.addEventListener('click', async () => {
     try {
         const groupName = document.getElementById('groupName1').value;
-        const user = document.getElementById('emailAddress').value;
+        const users = document.getElementById('emailAddress').value;
+        if(groupName === "" || users === "") {
+            return alert('Please Enter field');
+        }
         const groupDetails = {
             name: groupName,
-            userToBeAdd: user
+            userToBeAdd: users
         };
-        console.log(groupDetails);
         const token = localStorage.getItem('token');
         const response = await axios.post(`${backendApi}/group/add-user`, groupDetails, { headers: { "Authorization": token } });
         window.location.href = 'homepage.html';
@@ -59,7 +69,6 @@ addUserBtn.addEventListener('click', async () => {
     }
     catch (err) {
         const error = err.response.data.error;
-        window.location.href = 'homepage.html';
         alert(error);
     }
 })
@@ -111,10 +120,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function commomLines() {
         const userIds = [];
         const userIdChecked = document.querySelectorAll('.userIds');
+        let anyChecked = false;
         for (let i = 0; i < userIdChecked.length; i++) {
             if (userIdChecked[i].checked) {
+                anyChecked = true;
                 userIds.push(userIdChecked[i].value);
             }
+        }
+        if (!anyChecked) {
+            alert("please select a user");
+            return null;
         }
         const groupId = localStorage.getItem('activeGroup');
         return userDetails = {
@@ -185,7 +200,9 @@ const deleteGroupBtn = document.getElementById('deleteGroupBtn');
 deleteGroupBtn.addEventListener('click', async () => {
     try {
         const groupName = document.getElementById('groupName2').value;
-        console.log(groupName);
+        if(groupName === "") {
+            return alert('Please Enter field');
+        }
         const token = localStorage.getItem('token');
         const response = await axios.delete(`${backendApi}/group/delete-group/${groupName}`, { headers: { "Authorization": token } });
         window.location.href = 'homepage.html';
@@ -193,7 +210,6 @@ deleteGroupBtn.addEventListener('click', async () => {
     }
     catch (err) {
         const error = err.response.data.error;
-        window.location.href = 'homepage.html';
         alert(error);
     }
 })

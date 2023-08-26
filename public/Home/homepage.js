@@ -12,7 +12,6 @@ async function sendMessage(e) {
         groupId: groupId
     };
     document.getElementById('message').value = "";
-    console.log(messageDetails);
     try {
         const token = localStorage.getItem('token');
         const response = await axios.post(`${backendApi}/message/sendmessage`, messageDetails,
@@ -22,8 +21,8 @@ async function sendMessage(e) {
         );
         if (response.data.success) {
             const message = response.data.message;
-            showMessage(message);
-            displayedMessages.add(message.id);
+            // showMessage(message);
+            loadMessages();
         }
     }
     catch (err) {
@@ -31,45 +30,61 @@ async function sendMessage(e) {
     }
 }
 
-
-
+const socket = io('http://localhost:4000');
 document.addEventListener("DOMContentLoaded", () => {
     const listContainer = document.querySelector(".list-container");
     const chatContainer = document.querySelector(".chat");
 
     listContainer.addEventListener("click", async (event) => {
-        
-            const clickedItem = event.target.closest(".contact-names");
-            if (clickedItem) {
-                const groupId = clickedItem.dataset.groupId;
-                localStorage.setItem('activeGroup', groupId);
-                chatContainer.innerHTML = "";
-                displayedMessages.clear();
-                // const messages = JSON.parse(localStorage.getItem('messages'));
-                // const length = messages.length;
-                // const lastMsgId = messages[length - 1].id;
-                async function loadChats() {
-                const token = localStorage.getItem('token');
-                const response = await axios.get(`${backendApi}/message/getmessages/${groupId}`, { headers: { "Authorization": token } });
-                const messages = response.data.messages
-                for (let i = 0; i < messages.length; i++) {
-                    if (!displayedMessages.has(messages[i].id)) {
-                        showMessage(messages[i]);
-                        displayedMessages.add(messages[i].id);
-                    }
-                }
-            }
 
-            await loadChats();
-            const intervalId = setInterval(loadChats, 1000);
-
-            listContainer.addEventListener("click", () => {
-                clearInterval(intervalId);
-            });
+        const clickedItem = event.target.closest(".contact-names");
+        if (clickedItem) {
+            const groupId = clickedItem.dataset.groupId;
+            localStorage.setItem('activeGroup', groupId);
+            chatContainer.innerHTML = "";
+            displayedMessages.clear();
+            loadMessages();
         }
     })
 })
 
+async function loadMessages() {
+    const activeGroup = localStorage.getItem('activeGroup');
+    socket.emit('getMessages', activeGroup);
+    socket.on('gotMessages', (messages) => {
+        for (let i = 0; i < messages.length; i++) {
+            if (!displayedMessages.has(messages[i].id)) {
+                showMessage(messages[i]);
+                displayedMessages.add(messages[i].id);
+            }
+        }
+    })
+}
+
+async function showMessage(message) {
+
+    // const previousChat = document.querySelector('.previousChat');
+    const chat = document.querySelector('.chat');
+    const username = localStorage.getItem('username');
+    const newDiv = document.createElement('div');
+    const messageDiv = document.createElement('div');
+    const nameDiv = document.createElement('div');
+    messageDiv.innerHTML = message.message;
+    nameDiv.innerHTML = message.name;
+
+    if (username === message.name) {
+        newDiv.classList.add('receiver');
+        messageDiv.classList.add('message-receiver');
+    }
+    else {
+        newDiv.classList.add('sender');
+        nameDiv.classList.add('sender-name');
+        messageDiv.classList.add('message-sender');
+        newDiv.appendChild(nameDiv);
+    }
+    newDiv.appendChild(messageDiv);
+    chat.appendChild(newDiv);
+}
 
 
 // window.addEventListener('DOMContentLoaded', getChats);
@@ -96,10 +111,10 @@ document.addEventListener("DOMContentLoaded", () => {
 //         localStorage.setItem('messages', JSON.stringify(messages));
 
 // for (let i = 0; i < messages.length; i++) {
-//     if (!displayedMessages.has(messages[i].id)) {
-//         showMessage(messages[i]);
-//         displayedMessages.add(messages[i].id);
-//     }
+    // if (!displayedMessages.has(messages[i].id)) {
+    //     showMessage(messages[i]);
+    //     displayedMessages.add(messages[i].id);
+    // }
 // }
 //     }
 
@@ -109,30 +124,7 @@ document.addEventListener("DOMContentLoaded", () => {
 // }
 
 
-async function showMessage(message) {
 
-    // const previousChat = document.querySelector('.previousChat');
-    const chat = document.querySelector('.chat');
-    const username = localStorage.getItem('username');
-    const newDiv = document.createElement('div');
-    const messageDiv = document.createElement('div');
-    const nameDiv = document.createElement('div');
-    messageDiv.innerHTML = message.message;
-    nameDiv.innerHTML = message.name;
-
-    if (username === message.name) {
-        newDiv.classList.add('receiver');
-        messageDiv.classList.add('message-receiver');
-    }
-    else {
-        newDiv.classList.add('sender');
-        nameDiv.classList.add('sender-name');
-        messageDiv.classList.add('message-sender');
-        newDiv.appendChild(nameDiv);
-    }
-    newDiv.appendChild(messageDiv);
-    chat.appendChild(newDiv);
-}
 // let buttonCreated = false;
 // function showLoadingBtn(message) {
 
@@ -159,5 +151,3 @@ async function showMessage(message) {
 //     }
 //     buttonCreated = true;
 // }
-
-

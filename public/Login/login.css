@@ -113,3 +113,10 @@ form {
 .forgotPwd:hover {
     text-decoration: underline;
 }
+
+@media (max-width: 480px) {
+    .container {
+        margin-left: 10px;
+        margin-right: 10px;
+    }
+}
