@@ -26,6 +26,7 @@ body {
   height: 100%;
   overflow-y: auto;
   border-radius: 10px;
+  margin-top: 10px;
 }
 
 .contact-names {
@@ -44,6 +45,14 @@ body {
   overflow: none;
 }
 
+.current-group {
+  text-align: center;
+  color: #fff;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  font-size: large;
+}
+
 .chatting {
   display: flex;
   border-radius: 10px;
@@ -53,19 +62,7 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding: 20px;
   overflow-y: auto;
-  height: 85vh;
-}
-
-.loadBtn {
-  display: flex;
-  margin: 0 auto;
-  flex-direction: column;
-  order: 1;
-}
-
-.previousChat {
-  flex-direction: column;
-  order: 2;
+  height: 80vh;
 }
 
 .sender {
@@ -81,8 +78,11 @@ body {
   font-weight: bold;
 }
 
-.message-sender {
+.message-sender,
+.message-receiver {
   font-weight: normal;
+  word-wrap: break-word;
+  max-width: 500px;
 }
 
 .receiver {
@@ -96,32 +96,40 @@ body {
 
 .input-box {
   position: relative;
-  display: flex;
-  align-items: center;
-  padding: 10px;
-  justify-content: space-between;
-  border-radius: 20px;
-  margin-top: 7px;
+  margin-top: 10px;
 }
 
-input[type="text"] {
+.input-box input {
+  width: 100%;
   padding: 10px;
   border: none;
   border-radius: 20px;
 }
 
-i {
+.input-box .document-sharing {
   position: absolute;
-  top: 50%;
-  right: 40px;
-  transform: translateY(-50%);
-  font-size: 30px;
-  cursor: pointer;
-}
-
-.send-button {
+  right: 50px;
+  top: 0;
+  background-color: #f9f9f9;
   border: none;
   background: transparent;
+}
+
+.input-box .document-sharing i {
+  font-size: 30px;
+}
+
+.input-box .send-button {
+  position: absolute;
+  right: 5px;
+  top: 0;
+  background-color: #f9f9f9;
+  border: none;
+  background: transparent;
+}
+
+.input-box .send-button i {
+  font-size: 30px;
 }
 
 .modal-body form input {
@@ -178,8 +186,27 @@ h2 {
   color: #000;
 }
 
+.urlMsg {
+  font-weight: normal;
+  color: #0000ff;
+}
+
+.urlMsg:hover {
+  text-decoration: underline;
+  color: #0000ff;
+}
+
 @media (max-width: 480px) {
   .manage-users-modal .modal-content {
     width: 80%;
+  }
+}
+
+@media (max-width: 768px) {
+  .message-sender,
+  .message-receiver {
+    font-weight: normal;
+    word-wrap: break-word;
+    max-width: 200px;
   }
 }

@@ -60,12 +60,23 @@ exports.createGroup = async (req, res) => {
 exports.getGroups = async (req, res) => {
     try {
         const userId = req.user.id;
+        const groupId = req.query.groupId;
         const groupIds = await UserGroup.findAll({
             attributes: ['groupId'],
             where: {
                 userId: userId
             }
         });
+
+        if(groupId) {
+            const currentGroupName = await Group.findOne({
+                attributes: ['name'],
+                where: {
+                    id: groupId
+                }
+            }); 
+            return res.status(200).json({groupName: currentGroupName});
+        }
 
         const groupNames = [];
         for (let element of groupIds) {
@@ -140,11 +151,11 @@ exports.addUserinGroup = async (req, res) => {
             await t.rollback();
             return res.status(500).json({ error: err.message });
         }
-        else if(err.message === 'Please Enter valid group name') {
+        else if (err.message === 'Please Enter valid group name') {
             await t.rollback();
             return res.status(500).json({ success: false, error: err.message });
         }
-        else if(err.message === 'Please Enter valid email') {
+        else if (err.message === 'Please Enter valid email') {
             await t.rollback();
             return res.status(500).json({ success: false, error: err.message });
         }
@@ -348,7 +359,7 @@ exports.deleteGroup = async (req, res) => {
             await t.rollback();
             return res.status(500).json({ success: false, error: err.message });
         }
-        else if(err.message === 'Please Enter valid group name') {
+        else if (err.message === 'Please Enter valid group name') {
             await t.rollback();
             return res.status(500).json({ success: false, error: err.message });
         }

@@ -1,5 +1,8 @@
 const Chat = require('../model/chatModel');
+const Admin = require('../model/adminModel');
 const sequelize = require('../util/database');
+const S3Services = require('../services/S3Service');
+const jwt = require('jsonwebtoken');
 const io = require('socket.io')(4000, {
     cors: {
         origin: '*',
@@ -7,19 +10,6 @@ const io = require('socket.io')(4000, {
         credentials: true,
     }
 })
-
-// const io = new Server(server, {
-//     cors: {
-//         origin: 'http://localhost:3000',
-//         methods: ['GET', 'POST'],
-//         allowedHeaders: ["my-custom-header"],
-//         credentials: true,
-//     },
-// });
-
-// server.listen(4000, () => {
-//     console.log('Socket.IO server listening on port 4000');
-// });
 
 exports.sendMessage = async (req, res) => {
     const t = await sequelize.transaction();
@@ -51,7 +41,6 @@ exports.sendMessage = async (req, res) => {
     }
 }
 
-// exports.getMessages = async (req, res) => {
 io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
     socket.on('getMessages', async (groupId) => {
@@ -63,26 +52,50 @@ io.on('connection', (socket) => {
                 }
             });
             io.emit('gotMessages', messages);
-            // const totalMsgs = await Chat.count();
         }
         catch (err) {
+            socket.on('connect_error', err => {
+                console.log(err);
+            })
+        }
+    })
+
+    socket.on('upload', async (file, fileExtension, groupId, fileType, token) => {
+        const t = await sequelize.transaction();
+        try {
+            const userDetails = jwt.verify(token, process.env.JWT_SECRETKEY);
+            const user = await Admin.findOne({
+                where: {
+                    id: userDetails.userId
+                }
+            });
+            const userId = user.id;
+            const userName = user.name;
+            const fileName = `chatAppFile${groupId}/${new Date()}.${fileExtension}`;
+            const fileUrl = await S3Services.uploadToS3(file, fileName, fileType);
+            const newMessage = await Chat.create({
+                name: userName,
+                message: fileUrl,
+                userId: userId,
+                groupId: groupId
+            }, { transaction: t });
+
+            const chatData = {
+                id: newMessage.id,
+                name: userName,
+                message: fileUrl
+            }
+
+            await t.commit();
+            io.emit('fileUrl', chatData);
+        }
+        catch (err) {
+            await t.rollback();
             console.log(err);
-            res.status(500).json({ error: "Something went wrong" });
+            socket.on('connect_error', err => {
+                console.log(err);
+            })
         }
     })
 })
-    // try {
-    //     const groupId = req.params.id;
-    //     const messages = await Chat.findAll({
-    //         attributes: ['id', 'name', 'message'],
-    //         where: {
-    //             groupId: groupId
-    //         }
-    //     });
-    //     // const totalMsgs = await Chat.count();
-    //     res.status(200).json({ success: true, messages: messages });
-    // }
-    // catch (err) {
-    //     console.log(err);
-    //     res.status(500).json({ error: "Something went wrong" });
-    // }
+

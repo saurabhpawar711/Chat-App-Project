@@ -1,9 +1,8 @@
 const backendApi = "http://16.170.78.233:3000";
 const displayedMessages = new Set();
+const socket = io('http://16.170.78.233:4000');
 const form = document.querySelector('#form');
-form.addEventListener('submit', sendMessage);
-
-async function sendMessage(e) {
+form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const groupId = localStorage.getItem('activeGroup');
     const message = document.getElementById('message').value;
@@ -21,16 +20,15 @@ async function sendMessage(e) {
         );
         if (response.data.success) {
             const message = response.data.message;
-            // showMessage(message);
-            loadMessages();
+            const groupId = localStorage.getItem('activeGroup');
+            loadMessages(groupId);
         }
     }
     catch (err) {
         console.log(err);
     }
-}
+});
 
-const socket = io('http://localhost:4000');
 document.addEventListener("DOMContentLoaded", () => {
     const listContainer = document.querySelector(".list-container");
     const chatContainer = document.querySelector(".chat");
@@ -40,18 +38,33 @@ document.addEventListener("DOMContentLoaded", () => {
         const clickedItem = event.target.closest(".contact-names");
         if (clickedItem) {
             const groupId = clickedItem.dataset.groupId;
+            updateCurrentGroup(groupId);
             localStorage.setItem('activeGroup', groupId);
             chatContainer.innerHTML = "";
             displayedMessages.clear();
-            loadMessages();
+            loadMessages(groupId);
         }
     })
 })
 
-async function loadMessages() {
-    const activeGroup = localStorage.getItem('activeGroup');
-    socket.emit('getMessages', activeGroup);
+async function updateCurrentGroup(groupId) {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(`${backendApi}/user/groups?groupId=${groupId}`, { headers: { "Authorization": token } });
+    const groupName = response.data.groupName;
+    const currentGroupNameDiv = document.querySelector('.current-group');
+    currentGroupNameDiv.textContent = groupName.name;
+}
+window.addEventListener('DOMContentLoaded', () => {
+    const groupId = localStorage.getItem('activeGroup');
+    loadMessages(groupId);
+    updateCurrentGroup(groupId);
+})
+
+async function loadMessages(groupId) {
+
+    socket.emit('getMessages', groupId);
     socket.on('gotMessages', (messages) => {
+        console.log(messages);
         for (let i = 0; i < messages.length; i++) {
             if (!displayedMessages.has(messages[i].id)) {
                 showMessage(messages[i]);
@@ -63,13 +76,17 @@ async function loadMessages() {
 
 async function showMessage(message) {
 
-    // const previousChat = document.querySelector('.previousChat');
     const chat = document.querySelector('.chat');
     const username = localStorage.getItem('username');
     const newDiv = document.createElement('div');
     const messageDiv = document.createElement('div');
     const nameDiv = document.createElement('div');
-    messageDiv.innerHTML = message.message;
+    if (isUrl(message.message)) {
+        messageDiv.innerHTML = `<a class="urlMsg" href="${message.message}">${message.message}</a>`;
+    }
+    else {
+        messageDiv.innerHTML = message.message;
+    }
     nameDiv.innerHTML = message.name;
 
     if (username === message.name) {
@@ -86,68 +103,39 @@ async function showMessage(message) {
     chat.appendChild(newDiv);
 }
 
+function isUrl(message) {
+    try {
+        new URL(message);
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
 
-// window.addEventListener('DOMContentLoaded', getChats);
-// async function getChats() {
-//     try {
+const mediaSharingBtn = document.querySelector('.document-sharing');
+mediaSharingBtn.addEventListener('click', uploadMedia);
 
-//         const token = localStorage.getItem('token');
-//         const response = await axios.get(`http://localhost:3000/message/getmessages?id=${lastMsgId}`, { headers: { "Authorization": token } });
-//         const newMessage = response.data.messages;
-//         const noOfMsgs = response.data.noOfMsgs;
-//         if (noOfMsgs > 10) {
-//             showLoadingBtn();
-//         }
+function uploadMedia() {
 
-//         if (!messages) {
-//             localStorage.setItem('messages', JSON.stringify(newMessage));
-//         }
-//         else if (newMessage.length > 0) {
-//             newMessage.forEach(element => {
-//                 messages.shift();
-//                 messages.push(element);
-//             });
-//         }
-//         localStorage.setItem('messages', JSON.stringify(messages));
+    const fileShare = document.createElement('input');
+    fileShare.type = "file";
+    fileShare.click();
+    fileShare.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        const fileType = file.type;
+        const fileExtension = file.name.split('.')[1];
+        const groupId = localStorage.getItem('activeGroup');
+        const token = localStorage.getItem('token');
+        socket.emit('upload', file, fileExtension, groupId, fileType, token);
 
-// for (let i = 0; i < messages.length; i++) {
-    // if (!displayedMessages.has(messages[i].id)) {
-    //     showMessage(messages[i]);
-    //     displayedMessages.add(messages[i].id);
-    // }
-// }
-//     }
-
-//     catch (err) {
-//         console.log(err);
-//     }
-// }
-
-
-
-// let buttonCreated = false;
-// function showLoadingBtn(message) {
-
-//     if (!buttonCreated) {
-//         const chattingDiv = document.querySelector('.chatting');
-//         const loadBtnDiv = document.querySelector('.loadBtn');
-//         const loadButton = document.createElement('button');
-//         loadButton.classList.add('btn', 'btn-info', 'mb-3');
-//         loadButton.innerHTML = '<span class="bi bi-arrow-clockwise"></span> Load messages';
-//         loadBtnDiv.appendChild(loadButton);
-//         loadButton.addEventListener('click', async () => {
-//             const token = localStorage.getItem('token');
-//             const gotMessages = await axios.get('http://localhost:3000/message/getmessages', { headers: { "Authorization": token } })
-//             const messages = gotMessages.data.messages;
-//             let isPreviousChat = true;
-//             for (let i = 0; i < messages.length; i++) {
-//                 if (!displayedMessages.has(messages[i].id)) {
-//                     showMessage(messages[i], isPreviousChat);
-//                     displayedMessages.add(messages[i].id);
-//                 }
-//             }
-//             chattingDiv.removeChild(loadBtnDiv);
-//         });
-//     }
-//     buttonCreated = true;
-// }
+        socket.on('fileUrl', (data) => {
+            const url = data.message;
+            const imageMessage = {
+                id: data.id,
+                name: data.name,
+                message: `<a href="${url}">${url}</a>`
+            };
+            showMessage(imageMessage);
+        })
+    })
+}

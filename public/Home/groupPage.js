@@ -30,6 +30,7 @@ window.addEventListener('DOMContentLoaded', getGroupName);
 async function getGroupName() {
     const token = localStorage.getItem('token');
     const response = await axios.get(`${backendApi}/user/groups`, { headers: { "Authorization": token } });
+    console.log(response.data.groupDetails);
     const groupId = [];
     for (let i = 0; i < response.data.groupIds.length; i++) {
         groupId.push(response.data.groupIds[i].groupId);
